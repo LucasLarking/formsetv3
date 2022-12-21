@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>Home</h1>
+
+    {% for survey in surveys %}
+        <h3>{{survey}}</h3>
+        <a href="{% url 'surveyDetail' survey.id %}">Edit survey</a>
+    
+        <a href="{% url 'surveyTake' survey.id %}">Take survey</a>
+ 
+        <a href="{% url 'surveyData' survey.id %}">View Data</a>
+        {% for question in survey.get_questions %}
+            <p>{{question}} {{question.type}}  -  <a href="{% url 'surveyOption' question.id %}">Add Option</a></p>
+           
+        {% endfor %}
+    {% endfor %}
+
+    <h2>Create survey</h2>
+    <form action="" method="POST">
+        {% csrf_token %}
+        {{surveyForm}}
+        <input type="submit" value="submit">
+    </form>
+<hr>
+{% include 'base/links.html' %}
+
+<script>
+    let form = document.querySelector('form');
+    let url = `../surveyapi`
+    form.addEventListener('submit', (e) => {
+                e.preventDefault()
+                console.log('changing question')
+                let formdata = new FormData(form);
+
+                fetch(url, {
+                    method: 'POST',
+                    body: formdata
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log(data)
+
+                    })
+                    .catch(error => {
+                        console.log(error)
+                    })
+
+            })
+
+</script>
+</body>
+</html>

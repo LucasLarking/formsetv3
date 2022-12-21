@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+   <h1> {{survey}}: data</h1>
+
+   {% for question in survey.get_questions %}
+    <h4>{{question}} {{question.type}}</h4>
+
+    {% if question.type == 'm' or question.type == 's' %}
+       {% for option in question.get_options%}
+        <p>{{option}} {{option.votes}}</p>
+       {% endfor %}
+
+    {% else %}
+        {% for answer in question.get_answers %}
+            <p>{{answer}}</p>
+        {% endfor %}
+       
+    {% endif %}
+   {% endfor %}
+
+
+    <hr>
+    {% include 'base/links.html' %}
+</body>
+
+</html>

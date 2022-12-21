@@ -1,0 +1,8 @@
+import request
+from getpass import getpass
+password = getpass()
+auth_endpoint = "http://localhost:8000/auth/"
+auth_response = request.post(auth_endpoint, json={'username' : 'lucaslarking', 'password' : password})
+print(auth_response.json())
+
+if 

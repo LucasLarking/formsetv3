@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <style>
+        .error {
+            margin: 0;
+            padding: 0;
+            color: red;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .preview {
+            background-color: antiquewhite;
+
+        }
+
+        #changeQForm {
+            background-color: rgb(237, 163, 163);
+        }
+    </style>
+    <h1">created questions</h1>
+        {{survey}}
+
+
+        <div class="previewContainer">
+            {% for question in survey.get_questions %}
+            <div data-survey="{{survey.id}}" data-question="{{question.id}}" class="preview">
+                <h3>{{question}} {{question.type}}</h3>
+
+                <div class="options">
+                    {% for option in question.get_options%}
+                    <p class="option">{{option}}</p>
+                    {% endfor %}
+                </div>
+
+
+                <button class="editQBtn">Edit</button>
+                <p class="error"></p>
+            </div>
+            {% endfor %}
+        </div>
+        <hr>
+        <h3>create question</h3>
+
+        <form action="" id="addQForm" method="POST">
+            {% csrf_token %}
+
+            <div class="qForm">
+
+                {% for field in addQForm %}
+                {{field.label_tag}}
+                {{field}}
+                <p class="error"></p>
+                {% if field.errors %}
+
+                {% for error in field.errors %}
+                <p class="error">{{error}}</p>
+                {% endfor %}
+                {% endif %}
+
+
+                {% endfor %}
+
+            </div>
+
+
+            {{addOFormset.management_form}}
+            <div class="addOFormset">
+                {% for optionForm in addOFormset%}
+                <div class="addOForm">
+                    {% for field in optionForm %}
+                    {{field.label_tag}}
+                    {{field}}
+                    <button type="button" onclick="removeOptions(this.parentElement, 'add')" class="removeO">-</button>
+                    <p class="error"></p>
+                    {% if field.errors %}
+                    {% for error in field.errors %}
+                    <p class="error">{{error}}</p>
+                    {% endfor %}
+                    {% endif %}
+                    {% endfor %}
+
+
+                </div>
+                {% endfor %}
+            </div>
+
+
+            <br>
+            <input class="submit" type="submit" value="Add New Question">
+        </form>
+        <button id="addOBtn">Add option</button>
+        <hr>
+        <div id="addCopyForm" class="hidden">
+
+            {% for field in addOFormset.empty_form %}
+            {{field.label_tag}}
+            {{field}}
+            <button type="button" onclick="removeOptions(this.parentElement, 'add')" class="removeO">-</button>
+            {% endfor %}
+        </div>
+
+
+        <hr>
+        <form action="" class="hidden" id="changeQForm" method="POST">
+            {% csrf_token %}
+
+            <br>
+            <div class="qForm">
+
+                {% for field in ChangeQForm %}
+                {{field.label_tag}}
+                {{field}}
+                {% if field.errors %}
+                {% for error in field.errors %}
+                <p class="error">{{error}}</p>
+                {% endfor %}
+                {% endif %}
+                {% endfor %}
+                <p class="error"></p>
+            </div>
+
+
+            {{ChangeOFormset.management_form}}
+            <div class="changeOFormset">
+                {% for optionForm in ChangeOFormset%}
+
+                <div class="oForm">
+                    {% for field in optionForm.visible_fields %}
+                    {{field.label_tag}}
+                    {{field}}
+                    <button type="button" onclick="removeOptions(this.parentElement, 'change')"
+                        class="removeO">-</button>
+
+
+
+
+                    {% if field.errors %}
+                    {% for error in field.errors %}
+                    <p class="error">{{error}}</p>
+                    {% endfor %}
+                    {% endif %}
+                    {% endfor %}
+                    <p class="error"></p>
+
+
+                </div>
+                {% endfor %}
+
+            </div>
+
+
+            <br>
+            <p class="databaseError error"></p>
+            <input id="changeQBtn" class="submit" type="submit" value="change Question">
+
+        </form>
+        <button id="changeQAddBtn" type="button">Add option</button>
+
+        <div id="changeHiddenForm" class="hidden">
+
+
+            {% for field in ChangeOFormset.empty_form %}
+            {{field.label_tag}}
+            {{field}}
+            <button type="button" onclick="removeOptions(this.parentElement, 'change')" class="removeO">-</button>
+            <p class="error"></p>
+            {% endfor %}
+
+        </div>
+        <script>
+            let windowUrl = window.location.href;
+            let surveyId = windowUrl.split('/').slice(-1)[0];
+            let url = `../questionapi/${surveyId}`
+            const addQForm = document.querySelector('#addQForm');
+            const addOFormset = addQForm.querySelector('.addOFormset')
+            const addHiddenForm = document.querySelector('#addCopyForm')
+            const typeSelect = document.querySelector('#id_addQForm-type')
+            console.log(typeSelect)
+            const addOBtn = document.querySelector('#addOBtn')
+            const previewContainer = document.querySelector('.previewContainer');
+            let previews = Array.from(document.querySelectorAll('.preview'))
+
+
+
+            // Editform
+            const changeQForm = document.querySelector('#changeQForm')
+            const changeQTitle = changeQForm.querySelector('#id_ChangeQForm-question')
+            const changeOFormset = changeQForm.querySelector('.changeOFormset')
+            const changeHiddenForm = document.querySelector('#changeHiddenForm')
+            const changeQBtn = document.querySelector('#changeQBtn')
+            const changeQAddBtn = document.querySelector('#changeQAddBtn')
+
+            changeQAddBtn.addEventListener('click', () => {
+                addOption('change')
+
+            })
+
+            typeSelect.addEventListener('change', () => {
+                console.log('change')
+                let value = typeSelect.value
+                if (value == 'e' || value == 'i') {
+                    addOFormset.style.display = 'none';
+                } else {
+                    addOFormset.style.display = 'block';
+                }
+            })
+
+            addQForm.addEventListener('submit', (e) => {
+                e.preventDefault()
+                console.log('changing question')
+                let formdata = new FormData(addQForm);
+
+                fetch(url, {
+                    method: 'POST',
+                    body: formdata
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log(data)
+
+                        if (data.question) {
+                            let errors = Array.from(addQForm.querySelectorAll('.error'))
+                            errors.forEach(error => {
+                                error.textContent = ''
+                            });
+                            let preview = document.createElement('div');
+                            preview.setAttribute('class', 'preview');
+                            preview.setAttribute('data-survey', surveyId);
+                            preview.setAttribute('data-question', data.question.id);
+                            let question = document.createElement('h3');
+                            question.textContent = data.question.text;
+                            preview.appendChild(question);
+                            let options = document.createElement('div');
+                            options.setAttribute('class', 'options');
+
+                            for (let i = 0; i < data.optionList.length; i++) {
+                                let option = document.createElement('p');
+                                option.setAttribute('class', 'option');
+                                option.textContent = data.optionList[i]
+                                options.appendChild(option);
+
+
+                            }
+                            preview.appendChild(options);
+                            let editBtn = document.createElement('button');
+                            editBtn.setAttribute('class', 'editQBtn');
+                            editBtn.textContent = 'Edit';
+                            editBtn.addEventListener('click', () => {
+                                poppulateChangeForm(preview)
+                            })
+                            preview.appendChild(editBtn);
+                            let error = document.createElement('p')
+                            error.setAttribute('class', 'error');
+                            preview.appendChild(error)
+                            previewContainer.appendChild(preview);
+                        } else {
+                            console.log(data)
+
+
+                            try {
+                                let errorMsg = JSON.parse(data.questionErrors).question[0].message
+                                let errorP = addQForm.querySelector('.qForm').querySelector('.error')
+                                errorP.textContent = errorMsg
+
+                            } catch (error) {
+                                let errorP = addQForm.querySelector('.qForm').querySelector('.error')
+                                errorP.textContent = ''
+
+                            }
+                            let optionErrors = data.optionErrors
+
+                            let options = Array.from(addQForm.querySelectorAll('.addOForm'))
+                            for (let i = 0; i < optionErrors.length; i++) {
+
+                                try {
+                                    JSON.parse(optionErrors[i])
+                                    let optionError = JSON.parse(optionErrors[i]).option[0].message;
+                                    options[i].querySelector('.error').textContent = optionError
+
+                                } catch (e) {
+                                    options[i].querySelector('.error').textContent = ''
+
+                                }
+                            }
+                            // let jsonDta = JSON.parse(data)      
+                            // console.log(typeof jsonDta);
+                            // console.log(jsonDta.question)
+
+
+                        }
+
+
+
+
+
+                    })
+                    .catch(error => {
+                        console.log(error)
+                    })
+
+            })
+
+            addOBtn.addEventListener('click', () => {
+                addOption('add')
+            })
+            function addOption(formInstace) {
+                if (formInstace == 'add') {
+                    var fCount = addQForm.querySelector('#id_addOFormset-TOTAL_FORMS');
+                    var cloneClass = 'addOForm';
+                    var hidden = addHiddenForm
+                    var form = addOFormset
+                    var optionContainer = addQForm.querySelector('.addOFormset')
+
+                } else if (formInstace == 'change') {
+                    console.log('adding change for mstuff');
+                    var fCount = changeQForm.querySelector('#id_ChangeOFormset-TOTAL_FORMS');
+                    var cloneClass = 'oForm';
+                    var hidden = changeHiddenForm
+                    var form = changeQForm
+                    var optionContainer = form.querySelector('.changeOFormset')
+                }
+                let formCount = fCount;
+                let formCOuntInt = parseInt(formCount.getAttribute('value')) + 1;
+
+
+                let clone = hidden.cloneNode(true);
+                clone.removeAttribute('id', '')
+                clone.setAttribute('class', cloneClass)
+
+                let labelClone = clone.querySelector('label');
+
+
+                labelClone.setAttribute('for', labelClone.getAttribute('for').replace('__prefix__', formCOuntInt - 1));
+                clone.querySelector('input').setAttribute('id', clone.querySelector('input').getAttribute('id').replace('__prefix__', formCOuntInt - 1))
+                clone.querySelector('input').setAttribute('name', clone.querySelector('input').getAttribute('name').replace('__prefix__', formCOuntInt - 1))
+                let error = document.createElement('p')
+                error.setAttribute('class', 'error')
+                clone.appendChild(error)
+                optionContainer.appendChild(clone)
+                formCount.setAttribute('value', formCOuntInt)
+            }
+
+            function removeOptions(option, formInstace) {
+                if (formInstace == 'add') {
+                    var fCount = addQForm.querySelector('#id_addOFormset-TOTAL_FORMS');
+                    var cloneClass = '.addOForm';
+                    var hidden = addHiddenForm
+                    var form = addOFormset
+                    var optionContainer = addQForm.querySelector('.addOFormset')
+                    var name = 'addOFormset'
+
+                } else if (formInstace == 'change') {
+                    console.log('adding change for mstuff');
+                    var fCount = changeQForm.querySelector('#id_ChangeOFormset-TOTAL_FORMS');
+                    var cloneClass = '.oForm';
+                    var hidden = changeHiddenForm
+                    var form = changeQForm
+                    var optionContainer = changeQForm.querySelector('.changeOFormset')
+                    var name = 'ChangeOFormset'
+                }
+                console.log('remove', option)
+
+                let options = Array.from(optionContainer.querySelectorAll(cloneClass));
+                if (options) {
+                    if (options.length > 1) {
+                        option.remove()
+                        options = Array.from(form.querySelectorAll(cloneClass));
+                        for (let index = 0; index < options.length; index++) {
+                            const element = options[index];
+
+                            element.querySelector('label').setAttribute('for', `id_${name}-${index}-option`)
+                            element.querySelector('input').setAttribute('id', `id_${name}-${index}-option`)
+                            element.querySelector('input').setAttribute('name', `${name}-${index}-option`)
+                        }
+                        console.log(options.length)
+                        fCount.setAttribute('value', options.length);
+                    }
+
+                }
+
+            }
+
+
+
+            changeQForm.addEventListener('submit', (e) => {
+                e.preventDefault()
+                changeQ()
+            })
+
+            previews.forEach(preview => {
+                handlePreview(preview)
+            });
+
+            function handlePreview(preview) {
+                let survey = parseInt(preview.getAttribute('data-survey'))
+                let question = parseInt(preview.getAttribute('data-question'))
+                let editQBtn = preview.querySelector('.editQBtn')
+                editQBtn.addEventListener('click', () => {
+                    poppulateChangeForm(preview)
+                })
+
+
+            }
+
+            function poppulateChangeForm(preview) {
+                changeQForm.querySelectorAll('.error').forEach(error => {
+                    error.textContent = ''
+                });
+
+                let question = preview.getAttribute('data-question')
+                let formdata = new FormData();
+                formdata.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                formdata.append('questionId', question);
+
+
+                fetch(url, {
+                    method: 'POST',
+                    body: formdata
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.databaseError) {
+                            preview.querySelector('.error').textContent = data.databaseError
+                        } else {
+                            changeQForm.classList.remove('hidden')
+                            optionList = data.options
+
+                            changeQTitle.value = data.question.text
+
+                            Array.from(changeQForm.querySelectorAll('.oForm')).forEach(option => {
+                                option.remove()
+                            });
+                            changeQForm.querySelector('#id_ChangeOFormset-TOTAL_FORMS').setAttribute('value', 0)
+                            for (let i = 0; i < optionList.length; i++) {
+                                const element = optionList[i];
+
+
+                                let formCount = changeQForm.querySelector('#id_ChangeOFormset-TOTAL_FORMS');
+                                let formCountInt = parseInt(formCount.getAttribute('value')) + 1;
+
+                                let clone = changeHiddenForm.cloneNode(true);
+                                clone.removeAttribute('id', '')
+                                clone.setAttribute('class', 'oForm')
+
+                                let labelClone = clone.querySelector('label');
+                                let regex = labelClone.getAttribute('for')
+                                regex = regex.replace('__prefix__', formCountInt - 1)
+                                labelClone.setAttribute('for', regex)
+
+                                clone.querySelector('input').setAttribute('id', regex)
+                                clone.querySelector('input').setAttribute('value', optionList[i].text)
+                                clone.querySelector('input').setAttribute('name', regex.replace('id_', ''))
+
+                                clone.querySelector('input').setAttribute('id', regex)
+
+                                console.log('################################################################')
+
+
+                                // Array.from(clone.querySelectorAll('input'))[1].setAttribute('id', regex.replace('-option', '-id'))
+                                // Array.from(clone.querySelectorAll('input'))[1].setAttribute('name', regex.replace('-option', '-id'))
+
+                                changeOFormset.appendChild(clone)
+                                formCount.setAttribute('value', formCountInt)
+
+                            }
+                            changeQBtn.setAttribute('data-question', data.question.id)
+                            changeQBtn.setAttribute('data-survey', surveyId)
+
+                        }
+
+
+                    })
+                    .catch(error => {
+                        console.log(error)
+                    })
+            }
+
+            function changeQ() {
+                console.log('changing question')
+                let formdata = new FormData(changeQForm);
+
+                let windowUrl = window.location.href;
+
+                console.log('survey id', surveyId)
+                console.log('question id', changeQBtn.getAttribute('data-question'))
+
+                let questionId = changeQBtn.getAttribute('data-question')
+                let changeUrl = `surveydetail/${surveyId}`
+
+                console.log('urö', changeUrl)
+
+
+                fetch(changeUrl, {
+                    method: 'POST',
+                    body: formdata
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('data:', data)
+
+                        if (data.databaseError) {
+                            changeQForm.querySelector('.databaseError').textContent = data.databaseError
+                        } else if (data.optionErrors) {
+                            console.log('errors found')
+                            console.log('errors found', data.optionErrors)
+                            console.log('errors found', data.questionErrors)
+                            try {
+                                let errorMsg = JSON.parse(data.questionErrors).question[0].message
+                                let errorP = changeQForm.querySelector('.qForm').querySelector('.error')
+                                errorP.textContent = errorMsg
+
+                            } catch (error) {
+                                let errorP = changeQForm.querySelector('.qForm').querySelector('.error')
+                                errorP.textContent = ''
+
+                            }
+
+                            let optionErrors = data.optionErrors
+
+                            let options = Array.from(changeQForm.querySelectorAll('.oForm'))
+                            for (let i = 0; i < optionErrors.length; i++) {
+
+                                try {
+                                    JSON.parse(optionErrors[i])
+                                    let optionError = JSON.parse(optionErrors[i]).option[0].message;
+                                    options[i].querySelector('.error').textContent = optionError
+
+                                } catch (e) {
+                                    options[i].querySelector('.error').textContent = ''
+
+                                }
+                            }
+
+                        } else {
+                            let errors = Array.from(changeQForm.querySelectorAll('.error'))
+                            errors.forEach(error => {
+                                error.textContent = ''
+                            });
+                            let questionId = changeQBtn.getAttribute('data-question')
+
+                            previewObjs = Array.from(document.querySelectorAll('.preview'))
+                            previewObjs.forEach(previewObj => {
+                                if (previewObj.getAttribute('data-question') == questionId) {
+                                    previewObj.querySelector('h3').textContent = data.question;
+                                    let options = previewObj.querySelector('.options')
+
+
+                                    let optionList = Array.from(previewObj.querySelectorAll('.option'))
+                                    optionList.forEach(option => {
+                                        option.remove()
+                                    });
+
+                                    data.options.forEach(el => {
+                                        let option = document.createElement('p')
+                                        option.setAttribute('class', 'option')
+                                        option.textContent = el.text
+                                        options.append(option)
+
+                                    });
+                                }
+                            });
+                            console.log(data)
+                            // let questionTitle = data.question
+                            // let optinoArray = data.optionList
+
+                            // addChangeOptions(data)
+                        }
+
+
+
+
+                    })
+                    .catch(error => {
+                        console.log('fail')
+                        console.log(error)
+                    })
+            }
+
+
+
+        </script>
+</body>
+
+</html>

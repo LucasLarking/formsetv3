@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <h1>Edit survey</h1>
+
+    <h4>{{question}} {{question.type}}</h4>
+
+    {% for option in question.get_options %}
+
+    <p> {{option}}</p>
+    {% endfor %}
+
+    <h3>create: option </h3>
+    <form action="" method="POST" id="addOFormset">
+        {% csrf_token %}
+
+        {% for optionForm in optionFormset%}
+        <div class="addOForm">
+            {% for field in optionForm %}
+            {{field.label_tag}}
+            {{field}}
+            <button type="button" onclick="removeOptions(this.parentElement, 'add')" class="removeO">-</button>
+            <p class="error"></p>
+            {% if field.errors %}
+            {% for error in field.errors %}
+            <p class="error">{{error}}</p>
+            {% endfor %}
+            {% endif %}
+            {% endfor %}
+
+
+        </div>
+        {% endfor %}
+        <input type="submit" value="Add new Question">
+    </form>
+    <button id="addOBtn">Add option</button>
+
+    <div id="addCopyForm" class="hidden">
+
+        {% for field in optionFormset.empty_form %}
+        {{field.label_tag}}
+        {{field}}
+        <button type="button" onclick="removeOptions(this.parentElement, 'add')" class="removeO">-</button>
+        {% endfor %}
+    </div>
+
+    {% include 'base/links.html' %}
+
+    <script>
+        let windowUrl = window.location.href;
+
+        const addOFormset = addQForm.querySelector('#addOFormset')
+        const addHiddenForm = document.querySelector('#addCopyForm')
+        const addOBtn = document.querySelector('#addOBtn')
+   
+
+        addOBtn.addEventListener('click', () => {
+            addOption('add')
+        })
+        function addOption(formInstace) {
+            if (formInstace == 'add') {
+                var fCount = addQForm.querySelector('#id_addOFormset-TOTAL_FORMS');
+                var cloneClass = 'addOForm';
+                var hidden = addHiddenForm
+                var form = addOFormset
+                var optionContainer = addQForm.querySelector('.addOFormset')
+
+            } 
+            let formCount = fCount;
+            let formCOuntInt = parseInt(formCount.getAttribute('value')) + 1;
+
+
+            let clone = hidden.cloneNode(true);
+            clone.removeAttribute('id', '')
+            clone.setAttribute('class', cloneClass)
+
+            let labelClone = clone.querySelector('label');
+
+
+            labelClone.setAttribute('for', labelClone.getAttribute('for').replace('__prefix__', formCOuntInt - 1));
+            clone.querySelector('input').setAttribute('id', clone.querySelector('input').getAttribute('id').replace('__prefix__', formCOuntInt - 1))
+            clone.querySelector('input').setAttribute('name', clone.querySelector('input').getAttribute('name').replace('__prefix__', formCOuntInt - 1))
+            let error = document.createElement('p')
+            error.setAttribute('class', 'error')
+            clone.appendChild(error)
+            optionContainer.appendChild(clone)
+            formCount.setAttribute('value', formCOuntInt)
+        }
+    </script>
+</body>
+
+</html>
